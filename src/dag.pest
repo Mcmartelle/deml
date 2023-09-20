@@ -1,0 +1,10 @@
+node = { name ~ ((before | after) ~ (name ~ ("|" ~ name)*))? ~ ("=" ~ command)? ~ NEWLINE }
+name = { ASCII_ALPHA ~ (ASCII_ALPHA | ASCII_DIGIT | "_")* }
+shelf = { "===" ~ NEWLINE }
+before = { ">" }
+after = { "<" }
+command = @{ char+ }
+char = _{ !( NEWLINE ) ~ ANY }
+WHITESPACE = _{ " " }
+dag = { node+ ~ (shelf ~ node+)* }
+dag_file = _{ SOI ~ dag ~ EOI }
