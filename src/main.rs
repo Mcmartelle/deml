@@ -37,17 +37,44 @@ fn parse_dag(dag_string: &String) -> Result<()> {
                 println!("node: {:?}", part.as_str());
                 for node_part in part.into_inner() {
                     match node_part.as_rule() {
-                        Rule::name => println!("name: {:?}", node_part.as_str()),
+                        Rule::node_name => println!("node_name: {:?}", node_part.as_str()),
                         Rule::before => println!("before: {:?}", node_part.as_str()),
                         Rule::after => println!("after: {:?}", node_part.as_str()),
+                        Rule::before_name => {
+                            println!("before_name: {:?}", node_part.as_str())
+                        }
+                        Rule::after_name => {
+                            println!("after_name: {:?}", node_part.as_str())
+                        }
+                        Rule::before_nodes => println!("before_nodes: {:?}", node_part.as_str()),
+                        Rule::after_nodes => println!("after_nodes: {:?}", node_part.as_str()),
                         Rule::command => println!("command: {:?}", node_part.as_str()),
-                        _ => unreachable!(),
+                        Rule::shelf
+                        | Rule::node
+                        | Rule::dag
+                        | Rule::dag_file
+                        | Rule::name
+                        | Rule::WHITESPACE
+                        | Rule::char
+                        | Rule::EOI => {}
                     }
                 }
             }
             Rule::shelf => println!("shelf: {:?}", part.as_str()),
             Rule::EOI => println!("End of File"),
-            _ => unreachable!(),
+            Rule::node_name
+            | Rule::before
+            | Rule::after
+            | Rule::before_name
+            | Rule::after_name
+            | Rule::before_nodes
+            | Rule::after_nodes
+            | Rule::command
+            | Rule::name
+            | Rule::char
+            | Rule::WHITESPACE
+            | Rule::dag
+            | Rule::dag_file => {}
         }
     }
     Ok(())

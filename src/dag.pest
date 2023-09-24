@@ -1,5 +1,10 @@
-node = { name ~ ((before | after) ~ (name ~ ("|" ~ name)*))? ~ ("=" ~ command)? ~ NEWLINE }
-name = { ASCII_ALPHA ~ (ASCII_ALPHA | ASCII_DIGIT | "_")* }
+node = { node_name ~ (before_nodes | after_nodes)* ~ ("=" ~ command)? ~ NEWLINE }
+before_nodes = { before ~ (before_name ~ ("|" ~ before_name)*) }
+after_nodes = { after ~ (after_name ~ ("|" ~ after_name)*) }
+node_name = { name }
+before_name = { name }
+after_name = { name }
+name = _{ ASCII_ALPHA ~ (ASCII_ALPHA | ASCII_DIGIT | "_")* }
 shelf = { "===" ~ NEWLINE }
 before = { ">" }
 after = { "<" }
