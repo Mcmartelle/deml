@@ -6,8 +6,8 @@ before_name = { name }
 after_name = { name }
 name = _{ ASCII_ALPHA ~ (ASCII_ALPHA | ASCII_DIGIT | "_")* }
 shelf = { "===" ~ NEWLINE }
-before = { ">" }
-after = { "<" }
+before = _{ ">" }
+after = _{ "<" }
 command = @{ char+ }
 char = _{ !( NEWLINE ) ~ ANY }
 WHITESPACE = _{ " " }
