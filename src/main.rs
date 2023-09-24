@@ -2,6 +2,9 @@ extern crate pest;
 //#[macro_use]
 extern crate pest_derive;
 
+#[macro_use]
+extern crate icecream;
+
 use anyhow::Result;
 use clap::Parser as ClapParser;
 use pest::Parser as PestParser;
@@ -37,23 +40,69 @@ fn parse_dag(dag_string: &String) -> Result<()> {
                 println!("node: {:?}", part.as_str());
                 for node_part in part.into_inner() {
                     match node_part.as_rule() {
-                        Rule::node_name => println!("node_name: {:?}", node_part.as_str()),
-                        Rule::before => println!("before: {:?}", node_part.as_str()),
-                        Rule::after => println!("after: {:?}", node_part.as_str()),
-                        Rule::before_name => {
-                            println!("before_name: {:?}", node_part.as_str())
+                        Rule::node_name => {
+                            ic!("node name:", node_part.as_str());
                         }
-                        Rule::after_name => {
-                            println!("after_name: {:?}", node_part.as_str())
+                        Rule::before_nodes => {
+                            println!("before_nodes: {:?}", node_part.as_str());
+                            for before_node in node_part.into_inner() {
+                                match before_node.as_rule() {
+                                    Rule::before_name => {
+                                        println!("before_name: {}", before_node.as_str());
+                                    }
+                                    Rule::node
+                                    | Rule::shelf
+                                    | Rule::node_name
+                                    | Rule::before
+                                    | Rule::after
+                                    | Rule::after_name
+                                    | Rule::before_nodes
+                                    | Rule::after_nodes
+                                    | Rule::command
+                                    | Rule::name
+                                    | Rule::char
+                                    | Rule::WHITESPACE
+                                    | Rule::dag
+                                    | Rule::dag_file
+                                    | Rule::EOI => {}
+                                }
+                            }
                         }
-                        Rule::before_nodes => println!("before_nodes: {:?}", node_part.as_str()),
-                        Rule::after_nodes => println!("after_nodes: {:?}", node_part.as_str()),
+                        Rule::after_nodes => {
+                            println!("after_nodes: {:?}", node_part.as_str());
+                            for after_node in node_part.into_inner() {
+                                match after_node.as_rule() {
+                                    Rule::after_name => {
+                                        println!("after_name: {}", after_node.as_str());
+                                    }
+                                    Rule::node
+                                    | Rule::shelf
+                                    | Rule::node_name
+                                    | Rule::before
+                                    | Rule::after
+                                    | Rule::before_name
+                                    | Rule::before_nodes
+                                    | Rule::after_nodes
+                                    | Rule::command
+                                    | Rule::name
+                                    | Rule::char
+                                    | Rule::WHITESPACE
+                                    | Rule::dag
+                                    | Rule::dag_file
+                                    | Rule::EOI => {}
+                                }
+                            }
+                        }
                         Rule::command => println!("command: {:?}", node_part.as_str()),
                         Rule::shelf
                         | Rule::node
                         | Rule::dag
                         | Rule::dag_file
                         | Rule::name
+                        | Rule::before
+                        | Rule::after
+                        | Rule::before_name
+                        | Rule::after_name
                         | Rule::WHITESPACE
                         | Rule::char
                         | Rule::EOI => {}

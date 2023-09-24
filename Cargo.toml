@@ -9,5 +9,6 @@ edition = "2021"
 anyhow = "1.0.75"
 clap = { version = "4.4.4", features = ["derive"] }
 dagrs = "0.2.0"
+icecream = { git = "https://github.com/Mcmartelle/icecream-rs.git" }
 pest = "2.7.3"
 pest_derive = "2.7.3"
