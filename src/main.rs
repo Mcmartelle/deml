@@ -7,9 +7,14 @@ extern crate icecream;
 
 use anyhow::Result;
 use clap::Parser as ClapParser;
+use dagrs::{log, Action, CommandAction, Dag, LogLevel, Parser as DagrsParser, ParserError, Task};
+use pest::iterators::Pair;
 use pest::Parser as PestParser;
+use std::collections::{HashMap, HashSet};
 use std::ffi::OsString;
+use std::fmt::{Debug, Display, Formatter};
 use std::fs;
+use std::sync::Arc;
 
 #[derive(pest_derive::Parser)]
 #[grammar = "dag.pest"]
@@ -25,106 +30,251 @@ fn main() -> Result<()> {
     let args = Cli::parse();
     println!("Hello DAG path: {:?}", args.dag_file);
     let dag_string = fs::read_to_string(args.dag_file)?;
-    parse_dag(&dag_string)?;
+    let _initialized = log::init_logger(LogLevel::Info, None);
+    let mut dag =
+        Dag::with_config_file_and_parser(&dag_string, Box::new(DagFileParser), HashMap::new())?;
+    // assert!(dag.start()?);
     Ok(())
 }
 
-fn parse_dag(dag_string: &String) -> Result<()> {
-    let dag_parts = DagParser::parse(Rule::dag, &dag_string)
-        .expect("unsuccessful parse")
-        .next()
-        .unwrap();
-    for part in dag_parts.into_inner() {
-        match part.as_rule() {
-            Rule::node => {
-                println!("node: {:?}", part.as_str());
-                for node_part in part.into_inner() {
-                    match node_part.as_rule() {
-                        Rule::node_name => {
-                            ic!("node name:", node_part.as_str());
-                        }
-                        Rule::before_nodes => {
-                            println!("before_nodes: {:?}", node_part.as_str());
-                            for before_node in node_part.into_inner() {
-                                match before_node.as_rule() {
-                                    Rule::before_name => {
-                                        println!("before_name: {}", before_node.as_str());
-                                    }
-                                    Rule::node
-                                    | Rule::shelf
-                                    | Rule::node_name
-                                    | Rule::before
-                                    | Rule::after
-                                    | Rule::after_name
-                                    | Rule::before_nodes
-                                    | Rule::after_nodes
-                                    | Rule::command
-                                    | Rule::name
-                                    | Rule::char
-                                    | Rule::WHITESPACE
-                                    | Rule::dag
-                                    | Rule::dag_file
-                                    | Rule::EOI => {}
-                                }
-                            }
-                        }
-                        Rule::after_nodes => {
-                            println!("after_nodes: {:?}", node_part.as_str());
-                            for after_node in node_part.into_inner() {
-                                match after_node.as_rule() {
-                                    Rule::after_name => {
-                                        println!("after_name: {}", after_node.as_str());
-                                    }
-                                    Rule::node
-                                    | Rule::shelf
-                                    | Rule::node_name
-                                    | Rule::before
-                                    | Rule::after
-                                    | Rule::before_name
-                                    | Rule::before_nodes
-                                    | Rule::after_nodes
-                                    | Rule::command
-                                    | Rule::name
-                                    | Rule::char
-                                    | Rule::WHITESPACE
-                                    | Rule::dag
-                                    | Rule::dag_file
-                                    | Rule::EOI => {}
-                                }
-                            }
-                        }
-                        Rule::command => println!("command: {:?}", node_part.as_str()),
-                        Rule::shelf
-                        | Rule::node
-                        | Rule::dag
-                        | Rule::dag_file
-                        | Rule::name
-                        | Rule::before
-                        | Rule::after
-                        | Rule::before_name
-                        | Rule::after_name
-                        | Rule::WHITESPACE
-                        | Rule::char
-                        | Rule::EOI => {}
-                    }
-                }
-            }
-            Rule::shelf => println!("shelf: {:?}", part.as_str()),
-            Rule::EOI => println!("End of File"),
-            Rule::node_name
-            | Rule::before
-            | Rule::after
-            | Rule::before_name
-            | Rule::after_name
-            | Rule::before_nodes
-            | Rule::after_nodes
-            | Rule::command
-            | Rule::name
-            | Rule::char
-            | Rule::WHITESPACE
-            | Rule::dag
-            | Rule::dag_file => {}
+#[derive(Clone)]
+struct MyTask {
+    tid: usize,
+    name: String,
+    elevation: isize,
+    precursors: HashSet<String>,
+    percursor_ids: Vec<usize>,
+    postcursors: HashSet<String>,
+    postcursors_id: Vec<usize>,
+    action: Arc<dyn Action + Sync + Send>,
+}
+
+impl MyTask {
+    pub fn new(
+        name: String,
+        elevation: isize,
+        precursors: HashSet<String>,
+        postcursors: HashSet<String>,
+        action: impl Action + Send + Sync + 'static,
+    ) -> Self {
+        Self {
+            tid: dagrs::alloc_id(),
+            name,
+            elevation,
+            precursors,
+            percursor_ids: Vec::new(),
+            postcursors,
+            postcursors_id: Vec::new(),
+            action: Arc::new(action),
         }
     }
-    Ok(())
+
+    pub fn init_precursors(&mut self, pres_id: Vec<usize>) {
+        self.percursor_ids = pres_id;
+    }
+
+    pub fn str_precursors(&self) -> HashSet<String> {
+        self.precursors.clone()
+    }
+
+    pub fn init_postcursors(&mut self, posts_id: Vec<usize>) {
+        self.postcursors_id = posts_id;
+    }
+
+    pub fn str_postcursors(&self) -> HashSet<String> {
+        self.postcursors.clone()
+    }
+
+    pub fn str_id(&self) -> String {
+        self.name.clone()
+    }
+}
+
+impl Task for MyTask {
+    fn action(&self) -> Arc<dyn Action + Sync + Send> {
+        self.action.clone()
+    }
+    fn predecessors(&self) -> &[usize] {
+        &self.percursor_ids
+    }
+    fn id(&self) -> usize {
+        self.tid
+    }
+    fn name(&self) -> String {
+        self.name.clone()
+    }
+}
+
+impl Display for MyTask {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{},{},pre:{:?},post:{:?}",
+            self.name, self.tid, self.precursors, self.postcursors
+        )
+    }
+}
+
+struct DagFileParser;
+
+impl DagFileParser {
+    fn parse_node(&self, node: Pair<'_, Rule>, elevation: isize) -> MyTask {
+        println!("node: {:?}", node.as_str());
+        let mut node_name: &str = "";
+        let mut precursors: HashSet<String> = HashSet::new();
+        let mut postcursors: HashSet<String> = HashSet::new();
+        let mut command: Option<&str> = None;
+        for node_part in node.into_inner() {
+            match node_part.as_rule() {
+                Rule::node_name => {
+                    ic!("node name:", node_part.as_str());
+                    node_name = node_part.as_str();
+                }
+                Rule::before_nodes => {
+                    println!("before_nodes: {:?}", node_part.as_str());
+                    for before_node in node_part.into_inner() {
+                        match before_node.as_rule() {
+                            Rule::before_name => {
+                                println!("before_name: {}", before_node.as_str());
+                                precursors.insert(String::from(before_node.as_str()));
+                            }
+                            Rule::node
+                            | Rule::shelf
+                            | Rule::node_name
+                            | Rule::before
+                            | Rule::after
+                            | Rule::after_name
+                            | Rule::before_nodes
+                            | Rule::after_nodes
+                            | Rule::command
+                            | Rule::name
+                            | Rule::char
+                            | Rule::WHITESPACE
+                            | Rule::dag
+                            | Rule::dag_file
+                            | Rule::EOI => {}
+                        }
+                    }
+                }
+                Rule::after_nodes => {
+                    println!("after_nodes: {:?}", node_part.as_str());
+                    for after_node in node_part.into_inner() {
+                        match after_node.as_rule() {
+                            Rule::after_name => {
+                                println!("after_name: {}", after_node.as_str());
+                                postcursors.insert(String::from(after_node.as_str()));
+                            }
+                            Rule::node
+                            | Rule::shelf
+                            | Rule::node_name
+                            | Rule::before
+                            | Rule::after
+                            | Rule::before_name
+                            | Rule::before_nodes
+                            | Rule::after_nodes
+                            | Rule::command
+                            | Rule::name
+                            | Rule::char
+                            | Rule::WHITESPACE
+                            | Rule::dag
+                            | Rule::dag_file
+                            | Rule::EOI => {}
+                        }
+                    }
+                }
+                Rule::command => {
+                    println!("command: {:?}", node_part.as_str());
+                    command = Some(node_part.as_str());
+                }
+                Rule::shelf
+                | Rule::node
+                | Rule::dag
+                | Rule::dag_file
+                | Rule::name
+                | Rule::before
+                | Rule::after
+                | Rule::before_name
+                | Rule::after_name
+                | Rule::WHITESPACE
+                | Rule::char
+                | Rule::EOI => {}
+            }
+        }
+        MyTask::new(
+            String::from(node_name),
+            elevation,
+            precursors,
+            postcursors,
+            CommandAction::new(command.unwrap()),
+        )
+    }
+}
+
+impl DagrsParser for DagFileParser {
+    fn parse_tasks(
+        &self,
+        file: &str,
+        _specific_actions: HashMap<String, Arc<dyn Action + Send + Sync + 'static>>,
+    ) -> Result<Vec<Box<dyn Task>>, ParserError> {
+        let dag_parts = DagParser::parse(Rule::dag, file)
+            .expect("unsuccessful pest parse")
+            .next()
+            .unwrap();
+        let mut map_name_to_id: HashMap<String, usize> = HashMap::new();
+        let mut tasks: HashMap<String, MyTask> = HashMap::new();
+        let mut elevation: isize = 0;
+
+        for part in dag_parts.into_inner() {
+            match part.as_rule() {
+                Rule::node => {
+                    println!("node: {:?}", part.as_str());
+                    let _task = self.parse_node(part, elevation);
+                    map_name_to_id.insert(_task.name.clone(), _task.id());
+                    tasks.insert(_task.name.clone(), _task);
+                }
+                Rule::shelf => {
+                    println!("shelf: {:?}", elevation);
+                    elevation -= 1;
+                }
+                Rule::EOI => println!("End of File"),
+                Rule::node_name
+                | Rule::before
+                | Rule::after
+                | Rule::before_name
+                | Rule::after_name
+                | Rule::before_nodes
+                | Rule::after_nodes
+                | Rule::command
+                | Rule::name
+                | Rule::char
+                | Rule::WHITESPACE
+                | Rule::dag
+                | Rule::dag_file => {}
+            }
+        }
+        for (name, task) in tasks.clone().iter() {
+            println!("{}: {}", name, task);
+
+            for successor in task.postcursors.iter() {
+                let needs_predecessor = tasks.get_mut(successor).expect("successor doesn't exist");
+                needs_predecessor.precursors.insert(task.name.clone());
+            }
+        }
+        for (_, task) in tasks.iter_mut() {
+            let mut pre_ids: Vec<usize> = Vec::new();
+            for precursor in task.precursors.iter() {
+                pre_ids.push(
+                    *map_name_to_id
+                        .get(precursor)
+                        .expect("precursor node does not exist"),
+                );
+            }
+            task.init_precursors(pre_ids);
+        }
+        panic!()
+        // Ok(tasks
+        //     .into_iter()
+        //     .map(|(_, task)| Box::new(task) as Box<dyn Task>)
+        //     .collect())
+    }
 }
