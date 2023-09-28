@@ -1,6 +1,5 @@
-# DEML
+# DEML (DAG Elevation Markup Language)
 ## Warning: Experimental
-### The Directed Acylic Graph Elevation Markup Language
 
 DAGs ([Directed Acyclic Graphs](https://en.wikipedia.org/wiki/Directed_acyclic_graph)) act like rivers. Water doesn't flow upstream (tides and floods being exceptions). Sections of a river at the same elevation can't be the inputs or outputs of each other, like the nodes C, D, and E in the image below. Their input is B. C outputs to F, while D and E output to G. 
 
