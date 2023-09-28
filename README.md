@@ -2,7 +2,7 @@
 ## Warning: Experimental
 ### The Directed Acylic Graph Elevation Markup Language
 
-DAGs act like rivers. Water doesn't flow upstream (tides and floods being exceptions). Sections of a river at the same elevation can't be the inputs or outputs of each other, like the nodes C, D, and E in the image below. Their input is B. C outputs to F, while D and E output to G. 
+DAGs ([Directed Acyclic Graphs](https://en.wikipedia.org/wiki/Directed_acyclic_graph)) act like rivers. Water doesn't flow upstream (tides and floods being exceptions). Sections of a river at the same elevation can't be the inputs or outputs of each other, like the nodes C, D, and E in the image below. Their input is B. C outputs to F, while D and E output to G. 
 
 ![Photo of a river to illustrate how DAGs operate](assets/river-example.jpg)
 
@@ -27,7 +27,7 @@ DownRiver < F
 
 Nodes are defined by the first word on a line. The defined node can point to its outputs with `>` and to its inputs with `<`. Inputs and outputs are separated by `|`. 
 
-The [DAG-RS YAML example](https://github.com/open-rust-initiative/dagrs#yaml-configuration-file) 
+The [DAG-RS YAML example](https://github.com/open-rust-initiative/dagrs#yaml-configuration-file) for running shell commands in a DAG defined order.
 ```YAML
 dagrs:
   a:
@@ -63,7 +63,7 @@ dagrs:
     cmd: echo h
 ```
 
-Would be represented in DEML as follows
+ Would be represented in DEML as follows
 
 ```Haskell
 H > E | G = echo h
@@ -79,3 +79,5 @@ D < C | E = echo d
 ----
 A < B | C = echo a
 ```
+
+Shell commands can be assigned to a node with `=`. Minimal DAG-RS functionality is currently implemented in DEML.
