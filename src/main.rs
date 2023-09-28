@@ -2,12 +2,12 @@ extern crate pest;
 //#[macro_use]
 extern crate pest_derive;
 
-#[macro_use]
-extern crate icecream;
-
 use anyhow::Result;
 use clap::Parser as ClapParser;
-use dagrs::{log, Action, CommandAction, Dag, LogLevel, Parser as DagrsParser, ParserError, Task};
+use dagrs::{
+    log, Action, CommandAction, Dag, FileContentError, LogLevel, Parser as DagrsParser,
+    ParserError, Task,
+};
 use pest::iterators::Pair;
 use pest::Parser as PestParser;
 use std::collections::{HashMap, HashSet};
@@ -28,12 +28,12 @@ struct Cli {
 
 fn main() -> Result<()> {
     let args = Cli::parse();
-    println!("Hello DAG path: {:?}", args.dag_file);
+    // println!("Hello DAG path: {:?}", args.dag_file);
     let dag_string = fs::read_to_string(args.dag_file)?;
-    let _initialized = log::init_logger(LogLevel::Info, None);
+    let _initialized = log::init_logger(LogLevel::Debug, None);
     let mut dag =
         Dag::with_config_file_and_parser(&dag_string, Box::new(DagFileParser), HashMap::new())?;
-    // assert!(dag.start()?);
+    assert!(dag.start()?);
     Ok(())
 }
 
@@ -119,7 +119,7 @@ struct DagFileParser;
 
 impl DagFileParser {
     fn parse_node(&self, node: Pair<'_, Rule>, elevation: isize) -> MyTask {
-        println!("node: {:?}", node.as_str());
+        // println!("node: {:?}", node.as_str());
         let mut node_name: &str = "";
         let mut precursors: HashSet<String> = HashSet::new();
         let mut postcursors: HashSet<String> = HashSet::new();
@@ -127,16 +127,15 @@ impl DagFileParser {
         for node_part in node.into_inner() {
             match node_part.as_rule() {
                 Rule::node_name => {
-                    ic!("node name:", node_part.as_str());
-                    node_name = node_part.as_str();
+                    node_name = node_part.as_str().trim_end();
                 }
                 Rule::before_nodes => {
-                    println!("before_nodes: {:?}", node_part.as_str());
+                    // println!("before_nodes: {:?}", node_part.as_str());
                     for before_node in node_part.into_inner() {
                         match before_node.as_rule() {
                             Rule::before_name => {
-                                println!("before_name: {}", before_node.as_str());
-                                precursors.insert(String::from(before_node.as_str()));
+                                // println!("before_name: {}", before_node.as_str());
+                                precursors.insert(String::from(before_node.as_str().trim_end()));
                             }
                             Rule::node
                             | Rule::shelf
@@ -150,6 +149,7 @@ impl DagFileParser {
                             | Rule::name
                             | Rule::char
                             | Rule::WHITESPACE
+                            | Rule::COMMENT
                             | Rule::dag
                             | Rule::dag_file
                             | Rule::EOI => {}
@@ -157,12 +157,12 @@ impl DagFileParser {
                     }
                 }
                 Rule::after_nodes => {
-                    println!("after_nodes: {:?}", node_part.as_str());
+                    // println!("after_nodes: {:?}", node_part.as_str());
                     for after_node in node_part.into_inner() {
                         match after_node.as_rule() {
                             Rule::after_name => {
-                                println!("after_name: {}", after_node.as_str());
-                                postcursors.insert(String::from(after_node.as_str()));
+                                // println!("after_name: {}", after_node.as_str());
+                                postcursors.insert(String::from(after_node.as_str().trim_end()));
                             }
                             Rule::node
                             | Rule::shelf
@@ -176,6 +176,7 @@ impl DagFileParser {
                             | Rule::name
                             | Rule::char
                             | Rule::WHITESPACE
+                            | Rule::COMMENT
                             | Rule::dag
                             | Rule::dag_file
                             | Rule::EOI => {}
@@ -196,6 +197,7 @@ impl DagFileParser {
                 | Rule::before_name
                 | Rule::after_name
                 | Rule::WHITESPACE
+                | Rule::COMMENT
                 | Rule::char
                 | Rule::EOI => {}
             }
@@ -227,9 +229,10 @@ impl DagrsParser for DagFileParser {
         for part in dag_parts.into_inner() {
             match part.as_rule() {
                 Rule::node => {
-                    println!("node: {:?}", part.as_str());
+                    // println!("node: {:?}", part.as_str());
                     let _task = self.parse_node(part, elevation);
                     map_name_to_id.insert(_task.name.clone(), _task.id());
+                    println!("node name: {}", _task.name);
                     tasks.insert(_task.name.clone(), _task);
                 }
                 Rule::shelf => {
@@ -248,16 +251,45 @@ impl DagrsParser for DagFileParser {
                 | Rule::name
                 | Rule::char
                 | Rule::WHITESPACE
+                | Rule::COMMENT
                 | Rule::dag
                 | Rule::dag_file => {}
             }
         }
+        // Adding nodes with postcursors as precursors to those nodes
         for (name, task) in tasks.clone().iter() {
-            println!("{}: {}", name, task);
-
             for successor in task.postcursors.iter() {
+                println!("node: {}, with successor: {}", name, successor);
                 let needs_predecessor = tasks.get_mut(successor).expect("successor doesn't exist");
+                if task.elevation <= needs_predecessor.elevation {
+                    let msg: String = String::from("The file isn't empty but the node ")
+                        + name
+                        + " has an elevation of "
+                        + task.elevation.to_string().as_str()
+                        + " which needs to be greater than its successor's elevation which is "
+                        + needs_predecessor.elevation.to_string().as_str()
+                        + " for successor node "
+                        + needs_predecessor.name.to_string().as_str();
+                    return Err(ParserError::FileContentError(FileContentError::Empty(msg)));
+                }
                 needs_predecessor.precursors.insert(task.name.clone());
+            }
+        }
+        // Ensuring precursors are at a higher elevation than the nodes they preceed
+        for (name, task) in tasks.iter() {
+            for precursor in task.precursors.iter() {
+                let precursor_task = tasks.get(precursor).expect("precursor doesn't exist");
+                if task.elevation >= precursor_task.elevation {
+                    let msg: String = String::from("The file isn't empty but the node ")
+                        + name
+                        + " has an elevation of "
+                        + task.elevation.to_string().as_str()
+                        + " which needs to be less than its precursor's elevation which is "
+                        + precursor_task.elevation.to_string().as_str()
+                        + " for precursor node "
+                        + precursor_task.name.to_string().as_str();
+                    return Err(ParserError::FileContentError(FileContentError::Empty(msg)));
+                }
             }
         }
         for (_, task) in tasks.iter_mut() {
@@ -270,11 +302,12 @@ impl DagrsParser for DagFileParser {
                 );
             }
             task.init_precursors(pre_ids);
+            println!("{}", task);
         }
-        panic!()
-        // Ok(tasks
-        //     .into_iter()
-        //     .map(|(_, task)| Box::new(task) as Box<dyn Task>)
-        //     .collect())
+        // panic!()
+        Ok(tasks
+            .into_iter()
+            .map(|(_, task)| Box::new(task) as Box<dyn Task>)
+            .collect())
     }
 }

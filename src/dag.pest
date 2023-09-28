@@ -1,15 +1,16 @@
-node = { node_name ~ (before_nodes | after_nodes)* ~ ("=" ~ command)? ~ NEWLINE }
+node = { node_name ~ (before_nodes | after_nodes)* ~ ("=" ~ command)? ~ NEWLINE? }
 before_nodes = { before ~ (before_name ~ ("|" ~ before_name)*) }
 after_nodes = { after ~ (after_name ~ ("|" ~ after_name)*) }
 node_name = { name }
 before_name = { name }
 after_name = { name }
 name = _{ ASCII_ALPHA ~ (ASCII_ALPHA | ASCII_DIGIT | "_")* }
-shelf = { "===" ~ NEWLINE }
+shelf = { "----" ~ NEWLINE }
 before = _{ "<" }
 after = _{ ">" }
 command = @{ char+ }
 char = _{ !( NEWLINE ) ~ ANY }
 WHITESPACE = _{ " " }
+COMMENT = _{ ("/*" ~ (!"*/" ~ ANY)* ~ "*/") | ("//" ~ (!NEWLINE ~ ANY)*) }
 dag = { node+ ~ (shelf ~ node+)* }
 dag_file = _{ SOI ~ dag ~ EOI }
