@@ -17,7 +17,7 @@ use std::fs;
 use std::sync::Arc;
 
 #[derive(pest_derive::Parser)]
-#[grammar = "dag.pest"]
+#[grammar = "deml.pest"]
 pub struct DagParser;
 
 #[derive(clap::Parser, Debug)]
