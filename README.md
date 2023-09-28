@@ -9,7 +9,7 @@ DAGs act like rivers. Water doesn't flow upstream (tides and floods being except
 In DEML we represent an elevation marker with `----` on a new line. The order of elevation clusters is significant, but the order of nodes between two `----` elevations is not significant.
 
 ```Haskell
-Up River > A
+UpRiver > A
 ----
 A > B
 ----
@@ -20,9 +20,9 @@ D
 E
 ----
 F < C
-G < D | E > Down River
+G < D | E > DownRiver
 ----
-Down River < F
+DownRiver < F
 ```
 
 Nodes are defined by the first word on a line. The defined node can point to its outputs with `>` and to its inputs with `<`. Inputs and outputs are separated by `|`. 
@@ -66,16 +66,16 @@ dagrs:
 Would be represented in DEML as follows
 
 ```Haskell
-h > e | g = echo h
+H > E | G = echo h
 ----
-g = node ./tests/config/test.js
-e = echo e
+G = node ./tests/config/test.js
+G = echo e
 ----
-f < g = python3 ./tests/config/test.py
-c < e | g = echo c
+F < G = python3 ./tests/config/test.py
+C < E | G = echo c
 ----
-b < c | f | g = echo b
-d < c | e = echo d
+B < C | F | G = echo b
+D < C | E = echo d
 ----
-a < b | c = echo a
+A < B | C = echo a
 ```
