@@ -29,20 +29,25 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
+    /// Run a DEML file with dag-rs
     Run(Run),
+    /// Convert a DEML file to a Mermaid JS file
     Mermaid(Mermaid),
 }
 
 #[derive(Args)]
 struct Run {
+    /// Path to the input DEML file to run with dagrs. DEML formated strings can also be piped into stdin instead.
     #[arg(short, long)]
     input: Option<String>,
 }
 
 #[derive(Args)]
 struct Mermaid {
+    /// Path to the input DEML file to convert to a Mermaid JS file. DEML formated strings can also be piped into stdin instead.
     #[arg(short, long)]
     input: Option<String>,
+    /// Path to the new mermaid file to create, if no output path is given the Mermaid JS contents will go to stdout
     #[arg(short, long)]
     output: Option<String>,
 }
