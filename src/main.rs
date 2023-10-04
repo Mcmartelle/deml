@@ -296,7 +296,7 @@ fn parse_node(node: Pair<'_, Rule>, elevation: isize) -> MyTask {
         elevation,
         precursors,
         postcursors,
-        CommandAction::new(command.unwrap()),
+        CommandAction::new(command.unwrap_or(":")),
     )
 }
 
@@ -339,7 +339,17 @@ fn parse_dag(file: &str) -> Result<HashMap<String, MyTask>, ParserError> {
     // Adding nodes with postcursors as precursors to those nodes
     for (name, task) in tasks.clone().iter() {
         for successor in task.postcursors.iter() {
-            let needs_predecessor = tasks.get_mut(successor).expect("successor doesn't exist");
+            let needs_predecessor = match tasks.get_mut(successor) {
+                Some(x) => x,
+                None => {
+                    let msg = String::from("successor: '")
+                        + successor
+                        + "' for node: '"
+                        + name
+                        + "' not found.";
+                    return Err(ParserError::FileContentError(FileContentError::Empty(msg)));
+                }
+            };
             if task.elevation <= needs_predecessor.elevation {
                 let msg: String = String::from("The file isn't empty but the node ")
                     + name
