@@ -51,31 +51,31 @@ fn main() -> Result<()> {
     let cli = Cli::parse();
 
     match &cli.command {
-        Commands::Run(args) => match io::read_to_string(io::stdin()) {
-            Ok(dag_string) => {
+        Commands::Run(args) => match args.input.clone() {
+            Some(input) => {
+                let dag_string = fs::read_to_string(input)?;
                 run_dag(&dag_string)?;
             }
-            Err(_) => match args.input.clone() {
-                Some(input) => {
-                    let dag_string = fs::read_to_string(input)?;
+            None => match io::read_to_string(io::stdin()) {
+                Ok(dag_string) => {
                     run_dag(&dag_string)?;
                 }
-                None => {
-                    bail!("no input provide, use stdin or -i <filepath>")
+                Err(_) => {
+                    bail!("no input provided, use stdin or -i <filepath>")
                 }
             },
         },
-        Commands::Mermaid(args) => match io::read_to_string(io::stdin()) {
-            Ok(dag_string) => {
+        Commands::Mermaid(args) => match args.input.clone() {
+            Some(input) => {
+                let dag_string = fs::read_to_string(input)?;
                 mermaid_dag(&dag_string, args)?;
             }
-            Err(_) => match args.input.clone() {
-                Some(input) => {
-                    let dag_string = fs::read_to_string(input)?;
+            None => match io::read_to_string(io::stdin()) {
+                Ok(dag_string) => {
                     mermaid_dag(&dag_string, args)?;
                 }
-                None => {
-                    bail!("no input provide, use stdin or -i <filepath>")
+                Err(_) => {
+                    bail!("no input provided, use stdin or -i <filepath>")
                 }
             },
         },
