@@ -108,7 +108,7 @@ To convert to Mermaid Diagram files (.mmd) use the command `deml mermaid -i <inp
 
 ## Why, Though?
 
-I was thinking about how it's annoying in languages like C when function declaration order matters. Then I wondered if there would be a case when it would be a nice feature for declaration order to matter and I thought of DAGs.
+I was thinking about how it's annoying in languages like C when function declaration order matters. Then I wondered if there could be a case when it would be a nice feature for declaration order to matter and I thought of DAGs.
 
 ## License
 
