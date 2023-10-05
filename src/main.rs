@@ -414,3 +414,46 @@ impl DagrsParser for DagFileParser {
             .collect())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse_deml() {
+        let dag_string = "UpRiver > A\n----\nA > B\n----\nB > C | D | E\n----\nC\nD\nE\n----\nF < C\nG < D | E > DownRiver\n----\nDownRiver < F";
+        let mut dag = match parse_dag(dag_string) {
+            Ok(dag) => dag,
+            Err(e) => panic!("parse_dag has an error: {}", e),
+        };
+        assert!(dag.contains_key("UpRiver"));
+        assert!(dag.contains_key("A"));
+        assert!(dag.contains_key("B"));
+        assert!(dag.contains_key("C"));
+        assert!(dag.contains_key("D"));
+        assert!(dag.contains_key("E"));
+        assert!(dag.contains_key("F"));
+        assert!(dag.contains_key("G"));
+        assert!(dag.contains_key("DownRiver"));
+        let node = dag.get_mut("UpRiver").unwrap();
+        assert!(node.precursors.is_empty());
+        let node = dag.get_mut("A").unwrap();
+        assert!(node.precursors.contains("UpRiver"));
+        let node = dag.get_mut("B").unwrap();
+        assert!(node.precursors.contains("A"));
+        let node = dag.get_mut("C").unwrap();
+        assert!(node.precursors.contains("B"));
+        let node = dag.get_mut("D").unwrap();
+        assert!(node.precursors.contains("B"));
+        let node = dag.get_mut("E").unwrap();
+        assert!(node.precursors.contains("B"));
+        let node = dag.get_mut("F").unwrap();
+        assert!(node.precursors.contains("C"));
+        let node = dag.get_mut("G").unwrap();
+        assert!(node.precursors.contains("D"));
+        assert!(node.precursors.contains("E"));
+        let node = dag.get_mut("DownRiver").unwrap();
+        assert!(node.precursors.contains("F"));
+        assert!(node.precursors.contains("G"));
+    }
+}
