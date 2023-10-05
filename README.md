@@ -8,7 +8,7 @@ DAGs act like rivers. Water doesn't flow upstream (tides and floods being except
 
 ![Photo of a river to illustrate how DAGs operate](assets/river-example.jpg)
 
-DEML's goal is to use this ordering in the file syntax to make it easier for humans to parse. In DEML we represent an elevation marker with `----` on a new line. The order of elevation clusters is significant, but the order of nodes between two `----` elevation markers is not significant.
+DEML's goal is to use this ordering as part of the file syntax to make it easier for humans to parse. In DEML we represent an elevation marker with `----` on a new line. The order of elevation clusters is significant, but the order of nodes between two `----` elevation markers is not significant.
 
 ```Haskell
 UpRiver > A
@@ -29,9 +29,13 @@ DownRiver < F
 
 Nodes are defined by the first word on a line. The defined node can point to its outputs with `>` and to its inputs with `<`. Inputs and outputs are separated by `|`. 
 
-## DAG-RS
+## Dagrs
 
-The [DAG-RS YAML example](https://github.com/open-rust-initiative/dagrs#yaml-configuration-file) for running shell commands in a DAG defined order.
+[Dagrs](https://github.com/open-rust-initiative/dagrs) is a library for running multiple tasks with dependencies defined in a DAG. In DEML, shell commands can be assigned to a node with `=`. DEML files can be run via dag-rs with the comand `deml run -i <filepath>`.
+
+To compare the difference in readability, here is the [Dagrs YAML example](https://github.com/open-rust-initiative/dagrs#yaml-configuration-file) in both YAML and DEML
+
+### YAML
 ```YAML
 dagrs:
   a:
@@ -67,13 +71,13 @@ dagrs:
     cmd: echo h
 ```
 
- Would be represented in DEML as follows
+### DEML
 
 ```Haskell
 H > E | G = echo h
 ----
 G = node ./tests/config/test.js
-G = echo e
+E = echo e
 ----
 F < G = python3 ./tests/config/test.py
 C < E | G = echo c
@@ -84,11 +88,10 @@ D < C | E = echo d
 A < B | C = echo a
 ```
 
-Shell commands can be assigned to a node with `=`. DEML files can be run with dag-rs with the comand `deml run -i <filepath>`.
 
 ## Mermaid JS
 
-To convert to Mermaid Diagram files (.mmd) use the command `deml mermaid -i <inputfile> -o <outputfile>`. The mermaid file can be used to generate an image at [mermaid.live](https://mermaid.live/)
+To convert DEML files to Mermaid Diagram files (.mmd) use the command `deml mermaid -i <inputfile> -o <outputfile>`. The mermaid file can be used to generate an image at [mermaid.live](https://mermaid.live/)
 
 ![mermaid js flowchart image of the river DAG](assets/river-mermaid-diagram.jpg)
 
