@@ -90,7 +90,7 @@ Shell commands can be assigned to a node with `=`. DEML files can be run with da
 
 To convert to Mermaid Diagram files (.mmd) use the command `deml mermaid -i <inputfile> -o <outputfile>`. The mermaid file can be used to generate an image at [mermaid.live](https://mermaid.live/)
 
-![mermaid js flowchart image of the river DAG](assets/river-mermaid-diagram.png)
+![mermaid js flowchart image of the river DAG](assets/river-mermaid-diagram.jpg)
 
 ## Goals
 
